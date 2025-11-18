@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>XSS Simulation</title></head>
+<body>
+<h1>XSS — Stored & Reflected (Simulation)</h1>
+<section>
+  <h3>Stored XSS (localStorage)</h3>
+  <form id="cform"><input id="name" placeholder="Your name"><br><textarea id="comment" rows=4 cols=60 placeholder="Comment (try <script>alert(1)</script>)"></textarea><br><button>Post Comment</button></form>
+  <div id="comments" style="border:1px solid #ccc;padding:8px;margin-top:8px"></div>
+  <details><summary>Mitigation</summary><pre>Use output encoding: htmlspecialchars() or textContent. Validate input length/types.</pre></details>
+</section>
+<hr>
+<section>
+  <h3>Reflected XSS (via URL param)</h3>
+  <p>Open this page with <code>?name=&lt;script&gt;alert('reflected')&lt;/script&gt;</code></p>
+  <p>Reflected greeting: <span id="greet"></span></p>
+  <details><summary>Mitigation</summary><pre>Escape output (use textContent), use CSP.</pre></details>
+</section>
+<script>
+// Stored comments
+function renderComments(){
+  const arr = JSON.parse(localStorage.getItem('lab_comments')||'[]');
+  const div = document.getElementById('comments'); div.innerHTML='';
+  arr.forEach(c=>{
+    // vulnerable output (innerHTML) - will execute scripts
+    const node = document.createElement('div');
+    node.innerHTML = '<strong>'+c.name+'</strong><p>'+c.comment+'</p><hr/>';
+    div.appendChild(node);
+  });
+}
+document.getElementById('cform').onsubmit = function(evt){
+  evt.preventDefault();
+  const name = document.getElementById('name').value || 'anon';
+  const comment = document.getElementById('comment').value || '';
+  const arr = JSON.parse(localStorage.getItem('lab_comments')||'[]');
+  arr.push({name,comment}); localStorage.setItem('lab_comments', JSON.stringify(arr));
+  renderComments();
+  return false;
+};
+renderComments();
+
+// Reflected XSS
+function getParam(n){ return new URLSearchParams(location.search).get(n); }
+const qname = getParam('name');
+if(qname !== null){
+  // vulnerable: innerHTML (reflected)
+  document.getElementById('greet').innerHTML = 'Hello, ' + qname;
+} else {
+  document.getElementById('greet').textContent = 'Hello, visitor';
+}
+</script>
+</body>
+</html>

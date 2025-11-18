@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>CSRF Simulation</title></head>
+<body>
+<h1>CSRF — Simulation</h1>
+<p>This demo simulates a logged-in user with a change-password form.</p>
+<div id="status"></div>
+<h3>Vulnerable Form (no token)</h3>
+<form id="vform"><input id="vpass" placeholder="New password"><button>Change (Vulnerable)</button></form>
+<h3>Protected Form (with token)</h3>
+<div id="tokenArea"></div>
+<details><summary>Mitigation</summary><pre>Use server-side CSRF tokens stored in session; verify token on POST.</pre></details>
+<p>Open <code>csrf_attack.html</code> (included in the ZIP) in another tab to simulate an attack.</p>
+<script>
+// store "session" info in localStorage for demo purposes
+if(!localStorage.getItem('lab_user')){
+  localStorage.setItem('lab_user', JSON.stringify({user:'victim',password:'initial123'}));
+}
+function renderStatus(){ document.getElementById('status').textContent = JSON.stringify(JSON.parse(localStorage.getItem('lab_user')),null,2); }
+renderStatus();
+
+document.getElementById('vform').onsubmit = function(e){
+  e.preventDefault();
+  const newp = document.getElementById('vpass').value || 'empty';
+  const u = JSON.parse(localStorage.getItem('lab_user'));
+  u.password = newp; localStorage.setItem('lab_user', JSON.stringify(u));
+  renderStatus(); alert('Password changed (vulnerable)');
+};
+
+// Protected form: token stored in "sessionStorage" (simulating server session)
+if(!sessionStorage.getItem('csrf_token')) sessionStorage.setItem('csrf_token', Math.random().toString(36).slice(2));
+const token = sessionStorage.getItem('csrf_token');
+document.getElementById('tokenArea').innerHTML = '<form id="pform"><input name="csrf_token" value="'+token+'"><input id="ppass" placeholder="New password"><button>Change (Protected)</button></form><p>Token: '+token+'</p>';
+document.getElementById('tokenArea').querySelector('#pform').onsubmit = function(e){
+  e.preventDefault();
+  const form = e.target; const sent = form.querySelector('[name=csrf_token]').value;
+  if(sent !== sessionStorage.getItem('csrf_token')){ alert('CSRF token invalid'); return; }
+  const newp = document.getElementById('ppass').value || 'empty';
+  const u = JSON.parse(localStorage.getItem('lab_user')); u.password = newp; localStorage.setItem('lab_user', JSON.stringify(u));
+  renderStatus(); alert('Password changed (protected)');
+};
+</script>
+</body>
+</html>

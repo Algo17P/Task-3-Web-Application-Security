@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>LFI Simulation</title></head><body>
+<h1>File Inclusion — Simulation</h1>
+<p>Choose a file to include (simulated). Type arbitrary path to simulate attack.</p>
+<select id="filesel"><option value="pages/home.txt">pages/home.txt</option><option value="pages/about.txt">pages/about.txt</option></select>
+<input id="fpath" placeholder="Or type ../../etc/passwd to simulate LFI">
+<button id="inc">Include</button>
+<div id="out" style="white-space:pre-wrap;border:1px solid #ccc;padding:8px;margin-top:8px"></div>
+<details><summary>Mitigation</summary><pre>Use whitelist of allowed files, sanitize path, disable allow_url_include.</pre></details>
+<script>
+const store = {
+  'pages/home.txt':'Home page content\nWelcome to the demo.',
+  'pages/about.txt':'About page content\nThis lab is simulation-only.',
+  '../../etc/passwd':'root:x:0:0:root:/root:/bin/bash\n... (simulated)',
+  'http://evil.example/shell.txt':'<?php echo "malicious"; ?> (simulated remote file)'
+};
+document.getElementById('inc').onclick = function(){
+  const sel = document.getElementById('filesel').value;
+  const path = document.getElementById('fpath').value.trim() || sel;
+  const out = store[path] || 'File not found (simulation)';
+  document.getElementById('out').textContent = 'Included: ' + path + '\n\n' + out;
+};
+</script>
+</body></html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>SQL Injection Simulation</title></head>
+<body>
+<h1>SQL Injection — Simulation</h1>
+<p>This demo simulates a vulnerable endpoint that concatenates user input into a SQL WHERE clause. It's frontend-only: the "database" is a JS array.</p>
+<h3>Live table (users)</h3>
+<pre id="users"></pre>
+<h3>Attack input (simulates ?id=)</h3>
+<input id="payload" style="width:60%" placeholder="Try: 1 OR 1=1 or 1; DROP TABLE users; or ' OR '1'='1" />
+<button id="run">Send</button>
+<button id="reset">Reset DB</button>
+<h3>Response (vulnerable)</h3>
+<div id="vuln" style="background:#fee;padding:10px;border:1px solid #f99"></div>
+<h3>Response (fixed - parameterized)</h3>
+<div id="fixed" style="background:#efe;padding:10px;border:1px solid #9f9"></div>
+<details>
+  <summary>Mitigation: Prepared Statements (example)</summary>
+  <pre>-- Example (PHP PDO)
+$stmt = $db->prepare('SELECT id, username, password FROM users WHERE id = ?');
+$stmt->execute([(int)$id]);
+  </pre>
+</details>
+<script>
+// simple in-memory "DB"
+const defaultUsers = [{id:1,username:'alice',password:'alicepass'},{id:2,username:'bob',password:'bobpass'},{id:3,username:'carol',password:'carolpass'}];
+function renderUsers(users){ document.getElementById('users').textContent = JSON.stringify(users, null, 2); }
+function resetDB(){ localStorage.setItem('lab_users', JSON.stringify(defaultUsers)); renderUsers(defaultUsers); document.getElementById('vuln').textContent=''; document.getElementById('fixed').textContent=''; }
+if(!localStorage.getItem('lab_users')) resetDB(); else renderUsers(JSON.parse(localStorage.getItem('lab_users')));
+
+document.getElementById('reset').onclick = resetDB;
+
+document.getElementById('run').onclick = function(){
+  const payload = document.getElementById('payload').value.trim();
+  const users = JSON.parse(localStorage.getItem('lab_users'));
+  // VULNERABLE: naive "SQL-like" evaluation: build WHERE id = <payload> and evaluate
+  // We'll support simple patterns: numeric id, OR 1=1, or "' OR '1'='1"
+  let vulnOut = '';
+  try {
+    if(/OR\s+1=1/i.test(payload) || /'\s*OR\s*'1'='1'/i.test(payload) || payload.toUpperCase().includes('DROP')){
+      // attacker gets full table or destructive attempt
+      if(/DROP/i.test(payload)){
+        vulnOut = 'Simulated SQL: DROP detected — removing table'; localStorage.removeItem('lab_users'); renderUsers([]);
+      } else {
+        vulnOut = 'Simulated SQL Injection success — returning all rows:\n' + JSON.stringify(users, null, 2);
+      }
+    } else {
+      // assume numeric id
+      const id = parseInt(payload) || 0;
+      const found = users.filter(u => u.id === id);
+      vulnOut = 'Query result:\n' + JSON.stringify(found, null, 2);
+    }
+  } catch(e){ vulnOut = 'Error: '+e; }
+  document.getElementById('vuln').textContent = vulnOut;
+
+  // FIXED: parameterized simulation - cast to int and only query that id
+  const id_fixed = parseInt(payload) || 0;
+  const fixedFound = JSON.parse(localStorage.getItem('lab_users')||'[]').filter(u=>u.id===id_fixed);
+  document.getElementById('fixed').textContent = 'Fixed query result:\n' + JSON.stringify(fixedFound, null, 2);
+  renderUsers(JSON.parse(localStorage.getItem('lab_users')||'[]'));
+};
+</script>
+</body>
+</html>

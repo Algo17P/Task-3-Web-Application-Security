@@ -1,0 +1,13 @@
+<!doctype html>
+<html><body>
+<h3>CSRF Attack (open while victim tab exists)</h3>
+<form id="atk" action="javascript:void(0)" method="POST">
+  <input name="password" value="hackedByCSRF">
+</form>
+<script>
+// simulate auto-submit to vulnerable form by updating localStorage directly (front-end only)
+const u = JSON.parse(localStorage.getItem('lab_user')||'{"user":"victim","password":"initial123"}');
+u.password = 'hackedByCSRF'; localStorage.setItem('lab_user', JSON.stringify(u));
+alert('Attack simulated: victim password overwritten in localStorage. Now check the CSRF demo page.');
+</script>
+</body></html>
